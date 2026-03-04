@@ -944,7 +944,7 @@ async function connect() {
             "Connect",
         );
         await withDefaultTimeout(
-            async () => connection.resetInterface(),
+            async () => picoboot.resetInterface(),
             "Reset Interface",
         );
 
@@ -1658,10 +1658,14 @@ async function tryRecover() {
     // First try a GET_COMMAND_STATUS
     try {
         let status = await getCommandStatus();
-        logActivity(`Pico returned status ${status.getStatusName()}`, 'info');
+        if (!status.isOk()) {
+            logActivity(`Picoboot error: ${status.getStatusName()}`, 'warning');
+        } else {
+            logActivity(`Picoboot status ${status.getStatusName()}`, 'info');
+        }
         // Move onto next step
     } catch (e) {
-        logActivity('GET_COMMAND_STATUS failed, trying reset...', 'warning');
+        logActivity('Querying status failed, trying reset...', 'warning');
         // Move onto next step
     }
 
@@ -1739,7 +1743,7 @@ async function reset() {
         // Perform a reset
         console.log('Resetting Pico connection...');
         await withDefaultTimeout(
-            async () => connection.resetInterface(),
+            async () => picoboot.resetInterface(),
             'Reset Interface'
         )
         console.log('Connection reset successfully');

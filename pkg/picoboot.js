@@ -53,8 +53,21 @@ export class Picoboot {
         let picobootInterface = null;
         let ifNum = null;
         
+        // Picoboot can use interface 0 or 1.  While the RP2350 schematic says
+        // interface numbers can change, the RP2350 itself will only use
+        // interface 0 (if mass storage device disabled) and interface 1
+        // otherwise - i.e. more than 1 interface.  That's the logic encoded
+        // here.  Strictly this implementation could be more flexible and
+        // search all interfaces, but it seems like picoboot implementations
+        // will want to work with picotool too, and picotool uses even simpler
+        // logic - either interface 0 (if 1 interface) or interface 1 (if more
+        // than 1 interface).
         for (const config of device.configurations) {
-            for (const iface of config.interfaces) {
+            // If there is more than one interface, start at interface[1]
+            const startIndex = config.interfaces.length > 1 ? 1 : 0;
+            console.log(`Found ${config.interfaces.length} interfaces in configuration ${config.configurationValue}, starting search at index ${startIndex}`);
+            for (let i = startIndex; i < config.interfaces.length; i++) {
+                const iface = config.interfaces[i];
                 for (const alt of iface.alternates) {
                     if (alt.interfaceClass === PICOBOOT_USB_CLASS && 
                         alt.interfaceSubclass === PICOBOOT_USB_SUBCLASS) {
@@ -175,7 +188,7 @@ export class Picoboot {
                 
                 if (matchesFilter) {
                     try {
-                        const picoboot = await Picoboot.fromDevice(device, timeouts);
+                        const picoboot = Picoboot.fromDevice(device, timeouts);
                         picobootDevices.push(picoboot);
                     } catch (e) {
                         console.error(`Failed to create Picoboot from device: ${e.message}`);
@@ -249,6 +262,8 @@ export class Picoboot {
             this.inEpMaxPacketSize,
             this.timeouts
         );
+
+        await this.connection.resetInterface(true);
         
         console.log('Connection established');
         return this.connection;
@@ -342,6 +357,29 @@ export class Picoboot {
             deviceSubclass: this.device.deviceSubclass,
             deviceProtocol: this.device.deviceProtocol,
         };
+    }
+
+    /**
+     * Resets the interface.
+     * @returns {Promise<void>}
+     */
+    async resetInterface() {
+        try {
+            await this.connection.resetInterface();
+
+        } catch (e) {
+            console.error(`Failed to perform hard reset: ${e.message}`);
+            try {
+                await this.device.close();
+                console.log('Device closed');
+            } catch (e) {
+                console.error(`Failed to close device: ${e.message}`);
+            }
+        }
+
+        if (!this.connection) {
+            throw new ProtocolError('Not connected');
+        }
     }
 
     /**

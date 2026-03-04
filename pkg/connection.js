@@ -69,13 +69,38 @@ export class Connection {
     }
 
     /**
+     * @param {string} direction - 'in' or 'out'
+     * @param {number} ep_num
+     * @returns {Promise<boolean>}
+     */
+    async getHaltState(direction, ep_num) {
+        const ep_addr = (direction === 'in' ? 0x80 : 0x00) | ep_num;
+        const result = await this.device.controlTransferIn({
+            requestType: 'standard',
+            recipient: 'endpoint',
+            request: 0x00,       // GET_STATUS
+            value: 0x0000,
+            index: ep_addr
+        }, 2);
+
+        if (result.status !== 'ok') {
+            throw new Error(`GET_STATUS failed: ${result.status}`);
+        }
+        const status = new DataView(result.data.buffer).getUint16(0, true);
+        // Bit 0 of the status indicates whether the endpoint is halted
+        const halted = (status & 0x0001) !== 0;
+        return halted;
+    }
+
+    /**
      * @returns {Promise<void>}
      */
     async resetInterface() {
         console.log('Resetting PICOBOOT interface');
 
         // Send INTERFACE_RESET request to the device - this causes it to
-        // clear HALT on both bulk endpoints
+        // clear HALT on both bulk endpoints if set
+        console.log('Sending INTERFACE_RESET');
         try {
             await this.device.controlTransferOut({
                 requestType: 'vendor',
@@ -92,12 +117,6 @@ export class Connection {
                 e
             );
         }
-
-        // After INTERFACE_RESET, clear both local bulk endpoints.  This
-        // causes the browser to allow us to continue using them.
-        await this.device.clearHalt('in', this.inEp);
-        await this.device.clearHalt('out', this.outEp);
-        console.log('Cleared WebUSB endpoint halts');
     }
 
     /**
@@ -403,6 +422,13 @@ export class Connection {
             const result = await this.device.transferIn(this.inEp, transferSize);
             console.log('Bulk read completed');
             
+            if (result.status === 'stall') {
+                // This is a hardware stall clear.  INTERFACE_RESET must still
+                // be sent to clear the protocol stall condition.  This will
+                // happen when GET_CMD_STATUS is queried after this error is
+                // thrown, and that returns an error.
+                await this.device.clearHalt('in', this.inEp);
+            }
             if (result.status !== 'ok') {
                 throw new Error(`Transfer status: ${result.status}`);
             }
@@ -417,7 +443,7 @@ export class Connection {
         } catch (e) {
             console.error('Bulk read error:', e);
             throw new UsbError(
-                `Bulk read failed: ${e.message}`,
+                `Error from device (${e.message})`,
                 this.target,
                 e
             );
@@ -433,6 +459,13 @@ export class Connection {
         try {
             const result = await this.device.transferOut(this.outEp, data);
             
+            if (result.status === 'stall') {
+                // This is a hardware stall clear.  INTERFACE_RESET must still
+                // be sent to clear the protocol stall condition.  This will
+                // happen when GET_CMD_STATUS is queried after this error is
+                // thrown, and that returns an error.
+                await this.device.clearHalt('in', this.inEp);
+            }
             if (result.status !== 'ok') {
                 throw new Error(`Transfer status: ${result.status}`);
             }
@@ -440,11 +473,13 @@ export class Connection {
             if (check && result.bytesWritten !== data.length) {
                 throw new Error(`Write size mismatch: expected ${data.length}, wrote ${result.bytesWritten}`);
             }
-            
+
+            //console.log(`Bulk write complete: ${result.bytesWritten} bytes written, data: ${Array.from(data).map(b => b.toString(16).padStart(2, '0')).join(' ')}`);
+       
             return result.bytesWritten;
         } catch (e) {
             throw new UsbError(
-                `Bulk write failed: ${e.message}`,
+                `Error from device (${e.message})`,
                 this.target,
                 e
             );
