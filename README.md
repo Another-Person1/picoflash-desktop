@@ -21,6 +21,27 @@ As well as a [website](https://picoflash.org) pico⚡flash is a full Javascript 
 - Full error handling
 - Detailed console logging
 
+## Desktop App (Electron)
+
+pico⚡flash can also run as a desktop app using Electron.
+
+### Run locally
+
+From the repository root:
+
+```bash
+npm install
+npm start
+```
+
+### Build an installer
+
+```bash
+npm run dist
+```
+
+This creates a packaged desktop build using `electron-builder`.
+
 ## Links
 
 - [Website](https://picoflash.org)

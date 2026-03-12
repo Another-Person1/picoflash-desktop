@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="/style.css">
-    <link rel="shortcut icon" href="/images/favicon.png" type="image/x-icon" />
+    <link rel="stylesheet" href="style.css">
+    <link rel="shortcut icon" href="images/favicon.png" type="image/x-icon" />
 
     <!-- SEO title & description -->
     <title>pico⚡flash</title>
@@ -17,14 +17,8 @@
     <meta property="og:type" content="website">
     <meta property="og:title" content="pico⚡flash">
     <meta property="og:description" content="Lightning fast Pico flashing from your browser">
-    <meta property="og:image" content="/images/picoflash%20image%20social.png">
+    <meta property="og:image" content="images/picoflash%20image%20social.png">
 
-    <!-- Twitter Meta Tags -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:url" content="https://picoflash.org/">
-    <meta name="twitter:title" content="pico⚡flash">
-    <meta name="twitter:description" content="Lightning fast Pico flashing from your browser">
-    <meta name="twitter:image" content="/images/picoflash%20image%20social.png">
 </head>
 
 <body>
@@ -39,6 +33,9 @@
         <section class="connection">
             <div class="connection-row">
                 <div class="connection-controls">
+                    <button id="chooseDeviceBtn" class="btn btn-secondary" data-tooltip="Choose which USB device source to use">Choose Device</button>
+                    <span id="selectedDeviceLabel" class="selected-device-label">Source: System picker</span>
+                    <button id="refreshDevicesBtn" class="btn btn-primary" data-tooltip="Refresh paired USB devices">Refresh Devices</button>
                     <button id="connectBtn" class="btn btn-primary" data-tooltip="Connect to an RP-based device">Connect</button>
                 </div>
             </div>
@@ -241,6 +238,25 @@
             </div>
         </div>
 
+        <div id="devicePickerModal" class="modal hidden">
+            <div class="modal-content device-picker-modal-content">
+                <div class="modal-header">
+                    <h3>Choose USB Device Source</h3>
+                    <button class="modal-close" id="closeDevicePickerModal">&times;</button>
+                </div>
+                <div class="device-picker-modal-body">
+                    <p class="device-picker-help">Pick a paired device for quick reconnect, or use the system picker.</p>
+                    <div id="devicePickerList" class="device-picker-list"></div>
+                </div>
+                <div class="modal-footer">
+                    <button id="refreshDevicePickerModalBtn" class="btn btn-secondary">Refresh</button>
+                    <button id="useSystemPickerBtn" class="btn btn-secondary">Use System Picker</button>
+                    <button id="cancelDevicePickerBtn" class="btn btn-secondary">Cancel</button>
+                    <button id="confirmDevicePickerBtn" class="btn btn-primary">Use Selection</button>
+                </div>
+            </div>
+        </div>
+
         <br>
 
         <div id="links" class="hr">
@@ -252,12 +268,6 @@
                 <a href="https://github.com/piersfinlayson/picoflash" target="_blank">GitHub Repository</a>
                 <span>pico⚡flash source code (MIT licensed)</span>
 
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#FF0000">
-                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                </svg>
-                <a href="https://www.youtube.com/@piers_rocks" target="_blank">YouTube Channel</a>
-                <span>Subscribe for more great open source projects</span>
-
             </div>
 
         </div>
@@ -266,10 +276,8 @@
     </div>
 </body>
 
-<script src="/js/site/footer.js"></script>
+<script src="js/site/footer.js"></script>
 
-<script type="module" src="/js/flash/picoflash.js"></script>
-
-<script data-goatcounter="https://picoflash.analytics.piers.rocks/count" async src="//picoflash.analytics.piers.rocks/count.js"></script>
+<script type="module" src="js/flash/picoflash.js"></script>
 
 </html>

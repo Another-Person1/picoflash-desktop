@@ -137,9 +137,25 @@ h3 {
 
 .connection-controls {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--space-md);
     margin-bottom: var(--space-lg);
     margin-inline: auto;
+    align-items: center;
+}
+
+.device-picker {
+    min-width: 300px;
+    max-width: 460px;
+}
+
+.selected-device-label {
+    color: var(--color-text-secondary);
+    font-size: 0.95rem;
+    max-width: 420px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .device-status {
@@ -622,7 +638,75 @@ h3 {
     padding: var(--space-xl);
     border-top: 1px solid var(--color-border);
     display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
     justify-content: center;
+}
+
+.device-picker-modal-content {
+    max-width: 680px;
+}
+
+.device-picker-modal-body {
+    padding: var(--space-lg);
+    overflow-y: auto;
+}
+
+.device-picker-help {
+    margin-top: 0;
+    margin-bottom: var(--space-md);
+    color: var(--color-text-secondary);
+    text-align: center;
+}
+
+.device-picker-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    min-height: 160px;
+    max-height: 45vh;
+    overflow-y: auto;
+}
+
+.device-picker-entry {
+    width: 100%;
+    text-align: left;
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.device-picker-entry:hover {
+    border-color: var(--color-accent);
+    background: var(--color-bg-hover);
+}
+
+.device-picker-entry.active {
+    border-color: var(--color-accent);
+    outline: 1px solid var(--color-accent);
+    box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+
+.device-picker-entry-title {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.device-picker-entry-meta {
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
+}
+
+.device-picker-empty {
+    text-align: center;
+    color: var(--color-text-secondary);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
 }
 
 /* Utility Classes */

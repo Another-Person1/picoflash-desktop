@@ -6,10 +6,10 @@
 // Imports
 //
 
-import { Picoboot } from '/pkg/picoboot.js';
-import { Connection } from '/pkg/connection.js';
-import { uf2ToFlashBuffer } from '/js/uf2/uf2.js';
-import { PicobootStatusCmd } from '/pkg/commands.js';
+import { Picoboot } from '../../pkg/picoboot.js';
+import { Connection } from '../../pkg/connection.js';
+import { uf2ToFlashBuffer } from '../uf2/uf2.js';
+import { PicobootStatusCmd } from '../../pkg/commands.js';
 
 //
 // Type definitions
@@ -70,9 +70,24 @@ let activeTab = /** @type {HTMLElement} */ (flashTab);
 
 // Flash tab buttons
 const connectBtn = /** @type {HTMLButtonElement} */ (document.getElementById('connectBtn'));
+const chooseDeviceBtn = /** @type {HTMLButtonElement} */ (document.getElementById('chooseDeviceBtn'));
+const refreshDevicesBtn = /** @type {HTMLButtonElement} */ (document.getElementById('refreshDevicesBtn'));
+const selectedDeviceLabel = /** @type {HTMLElement} */ (document.getElementById('selectedDeviceLabel'));
 const flashBtn = /** @type {HTMLButtonElement} */ (document.getElementById('flashBtn'));
 const rebootBtn = /** @type {HTMLButtonElement} */ (document.getElementById('rebootBtn'));
 let flashOp = /** @type {string} */ null;
+let pairedDevices = [];
+let selectedPairedDeviceIndex = -1;
+let modalSelectedDeviceIndex = -1;
+
+// Device picker modal
+const devicePickerModal = /** @type {HTMLElement} */ (document.getElementById('devicePickerModal'));
+const closeDevicePickerModalBtn = /** @type {HTMLButtonElement} */ (document.getElementById('closeDevicePickerModal'));
+const devicePickerList = /** @type {HTMLElement} */ (document.getElementById('devicePickerList'));
+const refreshDevicePickerModalBtn = /** @type {HTMLButtonElement} */ (document.getElementById('refreshDevicePickerModalBtn'));
+const useSystemPickerBtn = /** @type {HTMLButtonElement} */ (document.getElementById('useSystemPickerBtn'));
+const cancelDevicePickerBtn = /** @type {HTMLButtonElement} */ (document.getElementById('cancelDevicePickerBtn'));
+const confirmDevicePickerBtn = /** @type {HTMLButtonElement} */ (document.getElementById('confirmDevicePickerBtn'));
 
 // Flash tab firmware file elements
 const dropZone = /** @type {HTMLElement} */ (document.getElementById('dropZone'));
@@ -138,7 +153,172 @@ function startup() {
 
     // Update the UI
     updateUi();
+
+    // Preload paired devices for quick reconnect via in-app picker.
+    void refreshPairedDevices();
+    updateSelectedDeviceLabel();
+
+    if ('usb' in navigator) {
+        navigator.usb.addEventListener('connect', () => {
+            void refreshPairedDevices();
+        });
+        navigator.usb.addEventListener('disconnect', () => {
+            void refreshPairedDevices();
+        });
+    }
 } 
+
+/**
+ * @param {Picoboot} device
+ * @returns {string}
+ */
+function pairedDeviceLabel(device) {
+    const usbInfo = device.getUsbDeviceInfo();
+    const vidPid = `${usbInfo.vendorId.toString(16).padStart(4, '0')}:${usbInfo.productId.toString(16).padStart(4, '0')}`;
+    const manufacturer = usbInfo.manufacturerName || 'Unknown';
+    const product = usbInfo.productName || 'USB Device';
+    const serial = usbInfo.serialNumber || '-';
+    return `${manufacturer} ${product} (${vidPid}) SN:${serial}`;
+}
+
+/**
+ * Returns a compact source label for the currently selected device source.
+ * @returns {string}
+ */
+function currentDeviceSourceLabel() {
+    if (selectedPairedDeviceIndex >= 0 && selectedPairedDeviceIndex < pairedDevices.length) {
+        return `Source: ${pairedDeviceLabel(pairedDevices[selectedPairedDeviceIndex])}`;
+    }
+    return 'Source: System picker';
+}
+
+/**
+ * Updates the inline selected source label.
+ * @returns {void}
+ */
+function updateSelectedDeviceLabel() {
+    selectedDeviceLabel.textContent = currentDeviceSourceLabel();
+}
+
+/**
+ * Renders all selectable entries for the device picker modal.
+ * @returns {void}
+ */
+function renderDevicePickerList() {
+    devicePickerList.textContent = '';
+
+    /**
+     * @param {string} title
+     * @param {string} meta
+     * @param {number} index
+     * @returns {HTMLButtonElement}
+     */
+    function createEntry(title, meta, index) {
+        const entry = document.createElement('button');
+        entry.type = 'button';
+        entry.className = 'device-picker-entry';
+        if (modalSelectedDeviceIndex === index) {
+            entry.classList.add('active');
+        }
+        entry.dataset.deviceIndex = String(index);
+
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'device-picker-entry-title';
+        titleDiv.textContent = title;
+
+        const metaDiv = document.createElement('div');
+        metaDiv.className = 'device-picker-entry-meta';
+        metaDiv.textContent = meta;
+
+        entry.appendChild(titleDiv);
+        entry.appendChild(metaDiv);
+        return entry;
+    }
+
+    const systemButton = createEntry(
+        'Use system picker',
+        'Ask the browser/Electron to show all available compatible USB devices',
+        -1,
+    );
+    devicePickerList.appendChild(systemButton);
+
+    if (pairedDevices.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'device-picker-empty';
+        empty.textContent = 'No paired devices found yet. Use the system picker to pair one.';
+        devicePickerList.appendChild(empty);
+        return;
+    }
+
+    for (let i = 0; i < pairedDevices.length; i++) {
+        const entry = createEntry(
+            pairedDeviceLabel(pairedDevices[i]),
+            'Previously paired device',
+            i,
+        );
+        devicePickerList.appendChild(entry);
+    }
+}
+
+/**
+ * Opens the in-app device picker modal.
+ * @returns {void}
+ */
+function openDevicePickerModal() {
+    modalSelectedDeviceIndex = selectedPairedDeviceIndex;
+    renderDevicePickerList();
+    devicePickerModal.classList.remove('hidden');
+}
+
+/**
+ * Closes the in-app device picker modal.
+ * @returns {void}
+ */
+function closeDevicePickerModal() {
+    devicePickerModal.classList.add('hidden');
+}
+
+/**
+ * Refreshes paired devices displayed in the picker.
+ * @param {boolean} logResult
+ * @returns {Promise<void>}
+ */
+async function refreshPairedDevices(logResult = false) {
+    if (!('usb' in navigator)) {
+        return;
+    }
+
+    const previousSelection = selectedPairedDeviceIndex;
+    const keepSelection = Number.isInteger(previousSelection) && previousSelection >= 0;
+
+    refreshDevicesBtn.disabled = true;
+    refreshDevicePickerModalBtn.disabled = true;
+
+    try {
+        pairedDevices = await Picoboot.getDevices();
+
+        if (keepSelection && previousSelection < pairedDevices.length) {
+            selectedPairedDeviceIndex = previousSelection;
+        } else {
+            selectedPairedDeviceIndex = -1;
+        }
+
+        modalSelectedDeviceIndex = selectedPairedDeviceIndex;
+        renderDevicePickerList();
+        updateSelectedDeviceLabel();
+
+        if (logResult) {
+            logActivity(`Found ${pairedDevices.length} paired device(s)`, 'info');
+        }
+    } catch (error) {
+        if (logResult) {
+            logActivity(`Could not refresh paired devices: ${error.message}`, 'error');
+        }
+    } finally {
+        refreshDevicesBtn.disabled = false;
+        refreshDevicePickerModalBtn.disabled = false;
+    }
+}
 
 /**
  * Formats a number of bytes into a human-readable string.
@@ -911,7 +1091,22 @@ async function connect() {
 
     // Try to get a device - requires the user to select one
     try {
-        picoboot = await Picoboot.requestDevice();
+        if (selectedPairedDeviceIndex >= 0 && selectedPairedDeviceIndex < pairedDevices.length) {
+            picoboot = pairedDevices[selectedPairedDeviceIndex];
+            logActivity('Using selected paired device', 'info');
+        } else if (selectedPairedDeviceIndex >= 0) {
+            await refreshPairedDevices();
+            if (selectedPairedDeviceIndex >= 0 && selectedPairedDeviceIndex < pairedDevices.length) {
+                picoboot = pairedDevices[selectedPairedDeviceIndex];
+                logActivity('Using refreshed paired device selection', 'info');
+            } else {
+                selectedPairedDeviceIndex = -1;
+                updateSelectedDeviceLabel();
+                picoboot = await Picoboot.requestDevice();
+            }
+        } else {
+            picoboot = await Picoboot.requestDevice();
+        }
         console.log('Device selected:', picoboot.getTarget().toString());
     } catch (error) {
         if (error.message.includes('cancelled')) {
@@ -978,7 +1173,70 @@ connectBtn.addEventListener('click', async () => {
         await connect();
     }
 
+    await refreshPairedDevices();
     updateUi();
+});
+
+chooseDeviceBtn.addEventListener('click', () => {
+    openDevicePickerModal();
+});
+
+refreshDevicesBtn.addEventListener('click', async () => {
+    await refreshPairedDevices(true);
+});
+
+closeDevicePickerModalBtn.addEventListener('click', () => {
+    closeDevicePickerModal();
+});
+
+cancelDevicePickerBtn.addEventListener('click', () => {
+    closeDevicePickerModal();
+});
+
+useSystemPickerBtn.addEventListener('click', () => {
+    selectedPairedDeviceIndex = -1;
+    modalSelectedDeviceIndex = -1;
+    updateSelectedDeviceLabel();
+    renderDevicePickerList();
+    closeDevicePickerModal();
+});
+
+confirmDevicePickerBtn.addEventListener('click', () => {
+    selectedPairedDeviceIndex = modalSelectedDeviceIndex;
+    updateSelectedDeviceLabel();
+    closeDevicePickerModal();
+});
+
+refreshDevicePickerModalBtn.addEventListener('click', async () => {
+    await refreshPairedDevices(true);
+});
+
+devicePickerList.addEventListener('click', (event) => {
+    const target = /** @type {HTMLElement} */ (event.target);
+    const entry = target.closest('.device-picker-entry');
+    if (!(entry instanceof HTMLElement)) {
+        return;
+    }
+
+    const selectedIndex = parseInt(entry.dataset.deviceIndex || '-1', 10);
+    if (!Number.isInteger(selectedIndex)) {
+        return;
+    }
+
+    modalSelectedDeviceIndex = selectedIndex;
+    renderDevicePickerList();
+});
+
+devicePickerModal.addEventListener('click', (event) => {
+    if (event.target === devicePickerModal) {
+        closeDevicePickerModal();
+    }
+});
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !devicePickerModal.classList.contains('hidden')) {
+        closeDevicePickerModal();
+    }
 });
 
 rebootBtn.addEventListener('click', async () => {
