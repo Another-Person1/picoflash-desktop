@@ -1,10 +1,11 @@
-# pico⚡flash
+# pico⚡flash desktop
+This will probably be edited more later, as this is very much in progress software.
 
-Use [pico⚡flash](https://picoflash.org) to flash your Raspberry Pi Pico microcontroller directly from your web browser using WebUSB.
+Desktop app for flashing RP2040/RP2350 based microcontrollers using WebUSB and Electron.
+Based on [pico⚡flash](https://github.com/piersfinlayson/picoflash) by Piers Finlayson.
+I am not affiliated with his project so any complaints about this project should not be sent to him.
 
-Requires Chrome, Edge or another Chromium-based browser with WebUSB support.
-
-Works on Windows, macOS, Linux and Android.
+Works on Windows, other operating systems will be added later.
 
 As well as a [website](https://picoflash.org) pico⚡flash is a full Javascript implementation of Raspberry Pi's PICOBOOT protocol, for flashing and managing RP2040 and RP2350 microcontrollers over USB.
 
@@ -21,33 +22,9 @@ As well as a [website](https://picoflash.org) pico⚡flash is a full Javascript 
 - Full error handling
 - Detailed console logging
 
-## Desktop App (Electron)
-
-pico⚡flash can also run as a desktop app using Electron.
-
-### Run locally
-
-From the repository root:
-
-```bash
-npm install
-npm start
-```
-
-### Build an installer
-
-```bash
-npm run dist
-```
-
-This creates a packaged desktop build using `electron-builder`.
-
 ## Links
-
-- [Website](https://picoflash.org)
-- [GitHub Repository](https://github.com/picoflash/picoflash)
-- [piers.rocks YouTube Channel](https://www.youtube.com/@piers_rocks)
+- [Original GitHub Repository](https://github.com/picoflash/picoflash)
 
 ## License
 
-[MIT License](LICENSE) - Copyright (C) 2025 Piers Finlayson
+[MIT License](LICENSE) - Copyright (C) 2026 Another-Person1, Copyright (C) 2025 Piers Finlayson
