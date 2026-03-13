@@ -75,6 +75,7 @@ const flashBtn = /** @type {HTMLButtonElement} */ (document.getElementById('flas
 const rebootBtn = /** @type {HTMLButtonElement} */ (document.getElementById('rebootBtn'));
 const deviceChooserPopup = /** @type {HTMLElement} */ (document.getElementById('deviceChooserPopup'));
 const deviceChooserList = /** @type {HTMLElement} */ (document.getElementById('deviceChooserList'));
+const deviceChooserHelp = /** @type {HTMLElement} */ (document.getElementById('deviceChooserHelp'));
 const closeDeviceChooserBtn = /** @type {HTMLButtonElement} */ (document.getElementById('closeDeviceChooserBtn'));
 const refreshDeviceChooserBtn = /** @type {HTMLButtonElement} */ (document.getElementById('refreshDeviceChooserBtn'));
 const cancelDeviceChooserBtn = /** @type {HTMLButtonElement} */ (document.getElementById('cancelDeviceChooserBtn'));
@@ -169,6 +170,17 @@ function deviceChoiceLabel(device) {
 function renderDeviceChooserList() {
     deviceChooserList.textContent = '';
 
+    if (chooserDevices.length === 0) {
+        deviceChooserHelp.textContent = 'No paired devices found. Choose Device to pick one now.';
+        confirmDeviceChooserBtn.textContent = 'Choose Device';
+    } else if (chooserSelectedIndex >= 0 && chooserSelectedIndex < chooserDevices.length) {
+        deviceChooserHelp.textContent = 'Use the selected paired device, or choose a different device directly.';
+        confirmDeviceChooserBtn.textContent = 'Use Selected Device';
+    } else {
+        deviceChooserHelp.textContent = 'Select a paired device from the list, or choose a device directly.';
+        confirmDeviceChooserBtn.textContent = 'Choose Device';
+    }
+
     /**
      * @param {string} title
      * @param {string} meta
@@ -200,7 +212,7 @@ function renderDeviceChooserList() {
     if (chooserDevices.length === 0) {
         const empty = document.createElement('div');
         empty.className = 'device-chooser-empty';
-        empty.textContent = 'No paired devices found. Use Selection to open the USB chooser.';
+        empty.textContent = 'No paired devices found. Choose Device to pick one now.';
         deviceChooserList.appendChild(empty);
     }
 
